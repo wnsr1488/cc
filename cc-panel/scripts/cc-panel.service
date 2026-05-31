@@ -1,0 +1,15 @@
+[Unit]
+Description=CC Panel Anti-CC Management API
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/cc-panel
+EnvironmentFile=/opt/cc-panel/.env
+ExecStart=/opt/cc-panel/bin/cc-panel-server
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

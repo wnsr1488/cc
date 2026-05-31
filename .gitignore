@@ -1,0 +1,16 @@
+# 敏感信息
+token.me
+.env
+*.tar.gz
+
+# Go
+*.exe
+*.test
+*.out
+
+# Node / 前端
+cc-panel/web/node_modules/
+cc-panel/web/dist/
+
+# 大型二进制数据（部署时用 scripts/package.sh 打包）
+cc-panel/data/ipdb/*.xdb

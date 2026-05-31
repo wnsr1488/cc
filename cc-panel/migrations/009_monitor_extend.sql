@@ -1,0 +1,7 @@
+ALTER TABLE server_metrics
+    ADD COLUMN IF NOT EXISTS cpu_usage DOUBLE PRECISION,
+    ADD COLUMN IF NOT EXISTS disk_usage DOUBLE PRECISION,
+    ADD COLUMN IF NOT EXISTS net_in_bytes BIGINT,
+    ADD COLUMN IF NOT EXISTS net_out_bytes BIGINT,
+    ADD COLUMN IF NOT EXISTS blocked_ip_count INT,
+    ADD COLUMN IF NOT EXISTS iptables_drop_hits BIGINT;
