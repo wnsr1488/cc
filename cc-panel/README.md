@@ -1,119 +1,83 @@
-# CC Panel Backend
+# CC Panel
 
-Go backend MVP for a Linux server anti-CC management panel.
+Go + Vue 3 实现的 Linux 服务器防 CC 管理面板（SSH 无 Agent 模式）。
 
-## Features
+## 已实现能力
 
-- PostgreSQL storage
-- Initial admin bootstrap
-- JWT authentication
-- Server asset CRUD
-- SSH connection test
-- Remote ipset and iptables initialization
-- Blacklist and whitelist synchronization through ipset
-- Audit logs for state-changing actions
+- JWT 登录、操作审计（分页）
+- 服务器资产管理与 SSH 测试
+- 远程 `ipset` / `iptables` 初始化、增量部署、停止规则、快照回滚
+- 黑白名单（含批量添加、按服务器 Tab 分页）
+- 地区 CIDR 管理、ip2region 查询、默认 9 国白名单、每日自动同步
+- 防护模式：`strict_whitelist` / `connection_count` / `off`
+- 自动封禁策略（`connection_count` + `ss` 采集，策略执行事件分页）
+- 系统监控采集、实时连接/封禁洞察
+- 远程自动安装 `ipset` / `iptables` 依赖
 
-## Requirements
+## 环境变量
 
-- Go 1.22+
-- PostgreSQL 13+
-- Managed Linux servers with `ipset`, `iptables`, and SSH access
+见 [`.env.example`](./.env.example)：
 
-## Setup
+| 变量 | 说明 |
+|------|------|
+| `HTTP_ADDR` | 监听地址，默认 `:8080` |
+| `DATABASE_URL` | PostgreSQL 连接串 |
+| `JWT_SECRET` | JWT 密钥（≥32 字符） |
+| `APP_ENCRYPTION_KEY` | 凭据加密密钥（32 字节） |
+| `ADMIN_USERNAME` / `ADMIN_PASSWORD` | 初始管理员 |
+| `IP2REGION_V4_XDB` / `IP2REGION_V6_XDB` | ip2region 数据库路径 |
 
-1. Configure the service.
-
-```bash
-cp .env.example .env
-```
-
-Set secure values for:
-
-- `JWT_SECRET`: at least 32 characters
-- `APP_ENCRYPTION_KEY`: exactly 32 characters
-- `ADMIN_PASSWORD`: initial administrator password
-
-2. Run database migrations.
+## 常用命令
 
 ```bash
+# 迁移
 go run ./cmd/migrate
-```
 
-3. Start the API.
-
-```bash
+# 开发启动
 go run ./cmd/server
-```
 
-### Validation
-
-```bash
+# 测试
 go test ./...
-go vet ./...
+
+# 前端构建
+cd web && npm install && npm run build
+
+# 打包发布
+bash scripts/package.sh
 ```
 
-## API
-
-Login:
+## API 示例
 
 ```bash
+# 登录
 curl -X POST http://127.0.0.1:8080/api/v1/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"username":"admin","password":"change-me"}'
-```
 
-Create a server:
-
-```bash
-curl -X POST http://127.0.0.1:8080/api/v1/servers \
-  -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "name": "web-01",
-    "host": "192.0.2.10",
-    "port": 22,
-    "username": "root",
-    "auth_type": "password",
-    "password": "server-password"
-  }'
-```
-
-Deploy ipset and iptables base rules:
-
-```bash
+# 部署防护规则
 curl -X POST http://127.0.0.1:8080/api/v1/servers/1/deploy \
+  -H "Authorization: Bearer $TOKEN"
+
+# 停止 iptables 规则（保留 ipset）
+curl -X POST http://127.0.0.1:8080/api/v1/servers/1/stop-rules \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-Add a blacklist IP:
-
-```bash
-curl -X POST http://127.0.0.1:8080/api/v1/firewall/blacklist \
-  -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{"server_ids":[1],"ip":"8.8.8.8","timeout":0,"reason":"manual block"}'
-```
-
-## Security Notes
-
-- The API never accepts arbitrary shell commands from users.
-- Remote firewall operations are generated from fixed command templates.
-- SSH passwords and private keys are encrypted before storage.
-- Whitelist rules are inserted before deny rules.
-- Audit logs are written for authentication and state-changing API calls.
-
-## Project Layout
+## 目录说明
 
 ```text
-cmd/server      API server entrypoint
-cmd/migrate     PostgreSQL migration runner
-internal/api    HTTP routing and handlers
-internal/auth   JWT, password hashing, and auth middleware
-internal/server Server asset repository and validation
-internal/sshx   SSH executor
-internal/ipset  Safe ipset command templates
-internal/iptables Safe iptables deployment templates
-internal/firewall Firewall orchestration service
-migrations      SQL schema migrations
-scripts         Local helper scripts
+cmd/server          API 服务（含静态前端）
+cmd/migrate         数据库迁移
+internal/api        HTTP 路由
+internal/firewall   防火墙编排（部署/停止/回滚/黑白名单）
+internal/geo        地区 CIDR 与默认白名单
+internal/policy     自动封禁策略
+internal/monitor    监控采集与实时洞察
+internal/iptables   iptables 脚本模板
+internal/ipset      ipset 脚本模板
+migrations/         SQL  schema
+web/                Vue 3 前端
+scripts/            打包与安装
 ```
+
+完整设计文档见仓库根目录 [`../cc.doc`](../cc.doc)。
